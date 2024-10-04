@@ -4,10 +4,9 @@
 */
 
 public class Matrix{
-	private int rows;
-	private int columns;	
+	public int rows;
+	public int columns;	
 	private double[] elements;
-
 
 	/*
 	 * Constructors:
@@ -41,8 +40,7 @@ public class Matrix{
 	 * Creates a matrix with order rows,columns with elements in elements
 	 * Blank elements are replaced by ZEROES
 	*/
-	public Matrix(int rows, int columns, double[] elements) throws MatrixInvalidDimensionsException{
-		if (rows < 0 || columns < 0 || elements.length > rows*columns) throw new MatrixInvalidDimensionsException();
+	public Matrix(int rows, int columns, double[] elements){
 		this.rows = rows;
 		this.columns = columns;
 		this.elements = new double[rows*columns];	
@@ -55,8 +53,7 @@ public class Matrix{
 	 * public Matrix(int rows, int columns, double element)
 	 * Creates a matrix of order rows,columns with all elements element
 	*/ 
-	public Matrix(int rows, int columns, double element) throws MatrixInvalidDimensionsException{
-		if (rows < 0 || columns < 0) throw new MatrixInvalidDimensionsException();
+	public Matrix(int rows, int columns, double element){
 		this.elements = new double[rows*columns];
 		this.rows = rows;
 		this.columns = columns;
@@ -98,8 +95,7 @@ public class Matrix{
 	 * returns the element of the matrix at i,j
 	 * begins with 1, as it does in mathematics
 	*/
-	public double get(int i, int j) throws MatrixIndexOutOfBoundsException{
-		if (i < 1 || i > this.rows || j < 1 || j > this.columns) throw new MatrixIndexOutOfBoundsException();
+	public double get(int i, int j){
 		return this.elements[(i-1)*this.columns+(j-1)];
 	}
 
@@ -108,9 +104,99 @@ public class Matrix{
 	 * replaces element i,j of matrix with double element
 	 * index begins with 1
 	*/
-	public void set(int i, int j, double element) throws MatrixIndexOutOfBoundsException{
-		if (i < 1 || i > this.rows || j < 1 || j > this.columns) throw new MatrixIndexOutOfBoundsException();
+	public void set(int i, int j, double element){
 		this.elements[(i-1)*this.columns+(j-1)] = element;
+	}
+
+	/*
+	 * public Matrix submatrix(int i, int j)
+	 * returns the submatrix not including the row i or column j
+	*/
+	public Matrix submatrix(int i, int j){
+		double[] elements = new double[(this.rows-1)*(this.columns-1)];
+		int elem = 0;
+		for (int k = 0; k < this.rows; k++){
+			for (int l = 0; l < this.columns; l++){
+				if (k != i-1 && l != j-1){
+					elements[elem] = this.get(k+1, l+1);
+					elem++;
+				}	
+			}
+		}
+		Matrix submatrix = new Matrix(this.rows-1, this.columns-1, elements);
+		return submatrix;
+	}
+
+	/*
+	 * public double determinant()
+	 * returns a double value that is the determinant of the matrix
+	*/
+	public double determinant() throws SquareMatrixExpected{
+		if (this.rows != this.columns) throw new SquareMatrixExpected();
+		if (this.rows == 1){
+			//1x1 matrix
+			//determinant is the element
+			return this.get(1,1);
+		}
+		else{
+			//nxn matrix
+			//use cofactors method to find determinant
+			double det = 0;
+			for (int i = 0; i < this.rows; i++){
+				Matrix submatrix = this.submatrix(1, i+1);
+				det += Math.pow(-1,i%2)*this.get(1, i+1)*submatrix.determinant();
+			}
+			return det;
+		}
+	}
+
+	/*
+	 * public Matrix copy()
+	 * returns a Matrix identical to this
+	*/
+	public Matrix copy(){
+		return new Matrix(this.rows, this.columns, this.elements);
+	}
+
+	/*
+	 * public Matrix transpose()
+	 * returns a Matrix containing the transpose of this
+	 * (switch rows and columns)
+	*/
+	public Matrix transpose(){
+		Matrix t = new Matrix(this.columns, this.rows, 0);
+		for (int i = 0; i < this.rows; i++){
+			for (int j = 0; j < this.columns; j++){
+				t.set(j+1, i+1, this.get(i+1, j+1));
+			}
+		}
+		return t;
+	}
+
+	/*
+	 * public Matrix det_matrix()
+	 * returns a Matrix containing the determinant matrix of this
+	 * (det of submatrix per element, alternating signs)
+	*/
+	
+	public Matrix det_matrix() throws SquareMatrixExpected{
+		if (this.rows != this.columns) throw new SquareMatrixExpected();
+		Matrix dm = new Matrix(this.rows, this.columns, 0);
+		for (int i = 0; i < this.rows; i++){
+			for (int j = 0; j < this.columns; j++){
+				dm.set(i+1, j+1, Math.pow(-1, i + j) * this.submatrix(i+1, j+1).determinant());
+			}
+		}
+		return dm;
+	}
+
+	/*
+	 * public Matrix inverse()
+	 * returns the multiplicative inverse of this
+	*/
+	public Matrix inverse() throws SquareMatrixExpected{
+		if (this.rows != this.columns) throw new SquareMatrixExpected();
+		return Matrix.multiply(1.0/this.determinant(), this.det_matrix().transpose());
 	}
 
 	/*
@@ -120,7 +206,7 @@ public class Matrix{
 	 * public static Matrix zero(int rows, int columns)
 	 * returns the zero matrix of specified order
 	*/
-	public static Matrix zero(int rows, int columns) throws MatrixInvalidDimensionsException{
+	public static Matrix zero(int rows, int columns){
 		return new Matrix(rows, columns, 0);
 	}
 
@@ -128,16 +214,73 @@ public class Matrix{
 	 * public static Matrix identity(int size)
 	 * returns the identity matrix for a given order
 	*/ 
-	public static Matrix identity(int size) throws MatrixInvalidDimensionsException{
+	public static Matrix identity(int size){
 		Matrix matrix = Matrix.zero(size, size);
 		for (int i = 1; i <= size; i++){
-			try{
-				matrix.set(i,i,1);
-			}
-			catch (MatrixIndexOutOfBoundsException e){
-				System.out.println("This line should never be executed.");
-			}
+			matrix.set(i,i,1);
 		}
 		return matrix;
+	}
+
+	/*
+	 * Static Operations:
+	 *
+	 *
+	 * public static Matrix add(Matrix a, Matrix b)
+	 * returns the sum of two matrixes
+	*/
+	public static Matrix add(Matrix a, Matrix b){
+		double[] new_matrix = new double[a.rows*a.columns];
+		for (int i = 0; i < a.rows; i++){
+			for (int j = 0; j < a.columns; j++){
+				new_matrix[j+i*a.columns] = a.get(i+1, j+1)+b.get(i+1, j+1);
+			}
+		}
+
+		Matrix m = new Matrix(a.rows, a.columns, new_matrix);
+		return m;
+	}
+
+	/*
+	 * public static Matrix multiply(Matrix a, Matrix b)
+	 * returns the product of AB
+	*/
+	public static Matrix multiply(Matrix a, Matrix b){
+		double[] elements = new double[a.rows*b.columns];
+
+		for (int i = 0; i < a.rows; i++){
+			for (int j = 0; j < b.columns; j++){
+				double element = 0;
+				for (int k = 0; k < a.columns; k++){
+					element += a.get(i+1, k+1) * b.get(k+1, j+1);	
+				}
+				elements[j + i*b.columns] = element;
+			}
+		}
+		Matrix product = new Matrix(a.rows, b.columns, elements);
+		return product;
+	}
+
+	/*
+	 * public static Matrix multiply(Matrix a, double b)
+	 * returns the product of Ab, where A is a matrix and b is a scalar
+	*/
+	public static Matrix multiply(Matrix a, double b){
+		System.out.println("Multiplying By A Scalar");
+		Matrix m = a.copy();
+		for (int i = 0; i < a.rows; i++){
+			for (int j = 0; j < a.columns; j++){
+				m.set(i+1, j+1, a.get(i+1, j+1)*b);
+			}
+		}
+		return m;
+	}
+
+	/*
+	 * public static Matrix multiply(double a, Matrix b)
+	 * returns multiply(b, a)
+	*/
+	public static Matrix multiply(double a, Matrix b){
+		return Matrix.multiply(b, a);
 	}
 }
